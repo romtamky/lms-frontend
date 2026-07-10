@@ -253,8 +253,8 @@ function LoginPage({ onLoginSuccess }) {
 
     // Test ở localhost
     const apiUrl = isLoginMode
-      ? "http://localhost:3000/api/login"
-      : "http://localhost:3000/api/register";
+      ? "https://lms-backend-30jz.onrender.com/api/login"
+      : "https://lms-backend-30jz.onrender.com/api/register";
 
     try {
       const res = await axios.post(apiUrl, { phone, password });
@@ -427,7 +427,7 @@ function HomePage({ user, onLogout }) {
   // 1. Tải danh sách khóa học (Ngôn ngữ) từ Backend mới
   useEffect(() => {
     axios
-      .get("http://localhost:3000/api/languages")
+      .get("https://lms-backend-30jz.onrender.com/api/languages")
       .then((res) => setLanguages(res.data.data))
       .catch((err) => console.error("Lỗi tải ngôn ngữ:", err));
   }, []);
@@ -437,7 +437,7 @@ function HomePage({ user, onLogout }) {
     if (selectedLanguage) {
       axios
         .get(
-          `http://localhost:3000/api/courses/progress?userId=${user.id}&languageId=${selectedLanguage.id}`,
+          `https://lms-backend-30jz.onrender.com/api/courses/progress?userId=${user.id}&languageId=${selectedLanguage.id}`,
         )
         .then((res) => setLessons(res.data.data))
         .catch((err) => console.error("Lỗi tải bài học:", err));
@@ -777,7 +777,7 @@ function LessonPage({ user }) {
     setIsPassed(false);
 
     axios
-      .get(`http://localhost:3000/api/lessons/${lessonId}?userId=${user.id}`)
+      .get(`https://lms-backend-30jz.onrender.com/api/lessons/${lessonId}?userId=${user.id}`)
       .then((res) => {
         setLesson(res.data.data);
         setIsLocked(false);
@@ -821,7 +821,7 @@ function LessonPage({ user }) {
     const interval = setInterval(() => {
       if (videoRef.current && !videoRef.current.paused) {
         axios
-          .post("http://localhost:3000/api/progress/ping", {
+          .post("https://lms-backend-30jz.onrender.com/api/progress/ping", {
             userId: user.id,
             lessonId,
             currentTime: videoRef.current.currentTime,
@@ -876,7 +876,7 @@ function LessonPage({ user }) {
 
   const handleVideoEnded = () => {
     setShowQuizBtn(true);
-    axios.post("http://localhost:3000/api/progress/ping", {
+    axios.post("https://lms-backend-30jz.onrender.com/api/progress/ping", {
       userId: user.id,
       lessonId,
       currentTime: maxWatched,
@@ -909,7 +909,7 @@ function LessonPage({ user }) {
       answer: answers[qId],
     }));
     try {
-      const res = await axios.post("http://localhost:3000/api/quiz/submit", {
+      const res = await axios.post("https://lms-backend-30jz.onrender.com/api/quiz/submit", {
         userId: user.id,
         lessonId,
         userAnswers: formattedAnswers,
@@ -1141,14 +1141,14 @@ function AdminPage({ user }) {
 
   const fetchLessons = () => {
     axios
-      .get("http://localhost:3000/api/admin/lessons")
+      .get("https://lms-backend-30jz.onrender.com/api/admin/lessons")
       .then((res) => setAdminLessons(res.data.data))
       .catch((err) => console.error(err));
   };
 
   const fetchLanguages = () => {
     axios
-      .get("http://localhost:3000/api/languages")
+      .get("https://lms-backend-30jz.onrender.com/api/languages")
       .then((res) => {
         setLanguages(res.data.data);
         if (res.data.data.length > 0)
@@ -1235,12 +1235,12 @@ function AdminPage({ user }) {
       let res;
       if (selectedLessonId === "")
         res = await axios.post(
-          "http://localhost:3000/api/admin/lessons",
+          "https://lms-backend-30jz.onrender.com/api/admin/lessons",
           payload,
         );
       else
         res = await axios.put(
-          `http://localhost:3000/api/admin/lessons/${selectedLessonId}`,
+          `https://lms-backend-30jz.onrender.com/api/admin/lessons/${selectedLessonId}`,
           payload,
         );
       alert(res.data.message);

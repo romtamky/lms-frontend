@@ -12,15 +12,6 @@ import axios from "axios";
 import Hls from "hls.js"; // 🛡️ Import Lõi giải mã HLS "hàng xịn"
 
 // ==========================================
-// COMPONENT ĐẶC BIỆT: ĐẦU ĐĨA HLS CHUYÊN DỤNG CHỐNG IDM
-// ==========================================
-// ==========================================
-// COMPONENT ĐẶC BIỆT: ĐẦU ĐĨA HLS + WATERMARK + MẶT NẠ TÀNG HÌNH (CHỐNG IDM)
-// ==========================================
-// ==========================================
-// COMPONENT ĐẶC BIỆT: ĐẦU ĐĨA HLS + WATERMARK + MẶT NẠ BỌC THÉP TỐI ĐA (CHỐNG IDM)
-// ==========================================
-// ==========================================
 // COMPONENT CAO CẤP: ĐẦU ĐĨA LÕI HLS + ĐỒ HỌA CANVAS (TRIỆT TIÊU 100% NÚT IDM)
 // ==========================================
 function HlsVideoPlayer({
@@ -209,6 +200,7 @@ function HlsVideoPlayer({
           {formatTime(currentTime)} / {formatTime(duration)}
         </span>
 
+        {/* 👇 CHỮ NGUYỄN TRÍ DŨNG Ở ĐÂY NÈ 👇 */}
         <span
           style={{
             marginLeft: "auto",
@@ -245,7 +237,7 @@ function HlsVideoPlayer({
 }
 
 // ==========================================
-// TRANG 1: ĐĂNG NHẬP & ĐĂNG KÝ (MẬT KHẨU)
+// TRANG 1: ĐĂNG NHẬP & ĐĂNG KÝ
 // ==========================================
 function LoginPage({ onLoginSuccess }) {
   const [isLoginMode, setIsLoginMode] = useState(true);
@@ -259,9 +251,10 @@ function LoginPage({ onLoginSuccess }) {
     setLoading(true);
     setError("");
 
+    // Test ở localhost
     const apiUrl = isLoginMode
-      ? "https://lms-backend-30jz.onrender.com/api/login"
-      : "https://lms-backend-30jz.onrender.com/api/register";
+      ? "http://localhost:3000/api/login"
+      : "http://localhost:3000/api/register";
 
     try {
       const res = await axios.post(apiUrl, { phone, password });
@@ -390,20 +383,66 @@ function LoginPage({ onLoginSuccess }) {
 }
 
 // ==========================================
-// TRANG 2: DANH SÁCH BÀI HỌC (DASHBOARD)
+// ==========================================
+// TRANG 2: TRANG CHỦ MỚI (SẢNH CHỜ CHỌN NGÔN NGỮ)
 // ==========================================
 function HomePage({ user, onLogout }) {
+  const [languages, setLanguages] = useState([]);
+  const [selectedLanguage, setSelectedLanguage] = useState(null);
   const [lessons, setLessons] = useState([]);
   const navigate = useNavigate();
 
+  // 🎨 Bộ từ điển gán cờ tự động bằng HÌNH ẢNH THẬT (Hiển thị đẹp trên mọi máy)
+  const getFlag = (langName) => {
+    if (!langName) return "📚";
+    if (langName.toLowerCase().includes("lào")) {
+      return (
+        <img
+          src="https://flagcdn.com/w160/la.png"
+          alt="Cờ Lào"
+          style={{
+            width: "80px",
+            borderRadius: "5px",
+            boxShadow: "0 4px 6px rgba(0,0,0,0.1)",
+          }}
+        />
+      );
+    }
+    if (langName.toLowerCase().includes("campuchia")) {
+      return (
+        <img
+          src="https://flagcdn.com/w160/kh.png"
+          alt="Cờ Campuchia"
+          style={{
+            width: "80px",
+            borderRadius: "5px",
+            boxShadow: "0 4px 6px rgba(0,0,0,0.1)",
+          }}
+        />
+      );
+    }
+    return "📚";
+  };
+
+  // 1. Tải danh sách khóa học (Ngôn ngữ) từ Backend mới
   useEffect(() => {
     axios
-      .get(
-        `https://lms-backend-30jz.onrender.com/api/courses/progress?userId=${user.id}`,
-      )
-      .then((res) => setLessons(res.data.data))
-      .catch((err) => console.error("Lỗi tải danh sách:", err));
-  }, [user.id]);
+      .get("http://localhost:3000/api/languages")
+      .then((res) => setLanguages(res.data.data))
+      .catch((err) => console.error("Lỗi tải ngôn ngữ:", err));
+  }, []);
+
+  // 2. Chỉ tải bài học khi học viên đã bấm chọn 1 ngôn ngữ
+  useEffect(() => {
+    if (selectedLanguage) {
+      axios
+        .get(
+          `http://localhost:3000/api/courses/progress?userId=${user.id}&languageId=${selectedLanguage.id}`,
+        )
+        .then((res) => setLessons(res.data.data))
+        .catch((err) => console.error("Lỗi tải bài học:", err));
+    }
+  }, [selectedLanguage, user.id]);
 
   return (
     <div
@@ -414,6 +453,7 @@ function HomePage({ user, onLogout }) {
         padding: "0 20px",
       }}
     >
+      {/* THANH THÔNG TIN BÊN TRÊN */}
       <div
         style={{
           display: "flex",
@@ -444,137 +484,271 @@ function HomePage({ user, onLogout }) {
             </span>
           )}
         </div>
-        <button
-          onClick={onLogout}
-          style={{
-            padding: "5px 10px",
-            background: "#6c757d",
-            color: "white",
-            border: "none",
-            borderRadius: "5px",
-            cursor: "pointer",
-          }}
-        >
-          Đăng xuất
-        </button>
-      </div>
-
-      <div
-        style={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          marginBottom: "20px",
-        }}
-      >
-        <h1 style={{ color: "#333", margin: 0 }}>Lộ trình học tập</h1>
-        {user.role === "admin" && (
+        <div>
+          {user.role === "admin" && (
+            <button
+              onClick={() => navigate("/admin")}
+              style={{
+                padding: "5px 10px",
+                background: "#343a40",
+                color: "white",
+                border: "none",
+                borderRadius: "5px",
+                cursor: "pointer",
+                marginRight: "10px",
+              }}
+            >
+              ⚙️ Quản trị
+            </button>
+          )}
           <button
-            onClick={() => navigate("/admin")}
+            onClick={onLogout}
             style={{
-              padding: "8px 15px",
-              background: "#343a40",
+              padding: "5px 10px",
+              background: "#6c757d",
               color: "white",
               border: "none",
               borderRadius: "5px",
               cursor: "pointer",
-              fontSize: "14px",
             }}
           >
-            ⚙️ Quản trị hệ thống
+            Đăng xuất
           </button>
-        )}
+        </div>
       </div>
 
-      <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
-        {lessons.length === 0 && (
-          <p style={{ textAlign: "center", color: "#666" }}>
-            Chưa có bài học nào.
-          </p>
-        )}
-        {lessons.map((lesson) => (
+      {/* NẾU CHƯA CHỌN KHÓA HỌC -> HIỂN THỊ SẢNH CHỜ */}
+      {!selectedLanguage ? (
+        <>
+          <h1
+            style={{ color: "#333", textAlign: "center", marginBottom: "30px" }}
+          >
+            🌍 Lựa Chọn Khóa Học Của Bạn
+          </h1>
+
+          {/* 🎨 ĐÃ LÀM ĐẸP CSS KHU VỰC NÀY */}
           <div
-            key={lesson.id}
+            style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(auto-fit, minmax(250px, 1fr))",
+              gap: "25px",
+            }}
+          >
+            {languages.map((lang) => (
+              <div
+                key={lang.id}
+                onClick={() => setSelectedLanguage(lang)}
+                style={{
+                  background: "linear-gradient(145deg, #ffffff, #f0f0f0)",
+                  padding: "40px 20px",
+                  borderRadius: "20px",
+                  border: "2px solid transparent",
+                  textAlign: "center",
+                  cursor: "pointer",
+                  boxShadow:
+                    "5px 5px 15px rgba(0,0,0,0.05), -5px -5px 15px rgba(255,255,255,0.8)",
+                  transition: "all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1)",
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.transform = "translateY(-8px)";
+                  e.currentTarget.style.boxShadow =
+                    "0 15px 25px rgba(0,123,255,0.15)";
+                  e.currentTarget.style.borderColor = "#007bff";
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.transform = "translateY(0)";
+                  e.currentTarget.style.boxShadow =
+                    "5px 5px 15px rgba(0,0,0,0.05), -5px -5px 15px rgba(255,255,255,0.8)";
+                  e.currentTarget.style.borderColor = "transparent";
+                }}
+              >
+                <div
+                  style={{
+                    fontSize: "70px",
+                    marginBottom: "20px",
+                    filter: "drop-shadow(2px 4px 6px rgba(0,0,0,0.2))",
+                  }}
+                >
+                  {getFlag(lang.name)}
+                </div>
+                <h2
+                  style={{
+                    margin: 0,
+                    color: "#2c3e50",
+                    fontSize: "24px",
+                    fontWeight: "800",
+                    letterSpacing: "1px",
+                  }}
+                >
+                  {lang.name}
+                </h2>
+                <p
+                  style={{
+                    color: "#7f8c8d",
+                    fontSize: "14px",
+                    marginTop: "10px",
+                  }}
+                >
+                  Bấm để vào học &rarr;
+                </p>
+              </div>
+            ))}
+
+            {languages.length === 0 && (
+              <p
+                style={{
+                  gridColumn: "span 2",
+                  textAlign: "center",
+                  color: "#666",
+                }}
+              >
+                Hệ thống chưa có khóa học nào. Chờ Admin thêm nhé!
+              </p>
+            )}
+          </div>
+        </>
+      ) : (
+        /* NẾU ĐÃ CHỌN KHÓA HỌC -> HIỂN THỊ DANH SÁCH BÀI NHƯ CŨ (KHÔNG ĐỔI) */
+        <>
+          <div
             style={{
               display: "flex",
               justifyContent: "space-between",
               alignItems: "center",
-              padding: "20px",
-              borderRadius: "10px",
-              border: "1px solid #ddd",
-              background: lesson.status === "locked" ? "#f8f9fa" : "#fff",
-              opacity: lesson.status === "locked" ? 0.6 : 1,
+              marginBottom: "20px",
+              flexWrap:
+                "wrap" /* MỚI: Cho phép rớt dòng gọn gàng nếu màn hình nhỏ */,
+              gap: "15px" /* MỚI: Tạo khoảng cách giữa nút và chữ nếu bị rớt dòng */,
             }}
           >
-            <div>
-              <h3 style={{ margin: 0, color: "#333" }}>{lesson.title}</h3>
-              <p
-                style={{ margin: "5px 0 0 0", color: "#666", fontSize: "14px" }}
-              >
-                {lesson.status === "completed" && "✅ Bạn đã vượt qua bài này"}
-                {lesson.status === "unlocked" && "⏳ Đang chờ bạn khám phá"}
-                {lesson.status === "locked" &&
-                  "🔒 Hãy hoàn thành bài trước để mở khóa"}
-              </p>
-            </div>
-            {lesson.status === "completed" && (
-              <button
-                onClick={() => navigate(`/lesson/${lesson.id}`)}
-                style={{
-                  padding: "10px 20px",
-                  background: "#28a745",
-                  color: "#fff",
-                  border: "none",
-                  borderRadius: "5px",
-                  cursor: "pointer",
-                  fontWeight: "bold",
-                }}
-              >
-                Đã hoàn thành
-              </button>
-            )}
-            {lesson.status === "unlocked" && (
-              <button
-                onClick={() => navigate(`/lesson/${lesson.id}`)}
-                style={{
-                  padding: "10px 20px",
-                  background: "#007bff",
-                  color: "#fff",
-                  border: "none",
-                  borderRadius: "5px",
-                  cursor: "pointer",
-                  fontWeight: "bold",
-                }}
-              >
-                Vào học ngay
-              </button>
-            )}
-            {lesson.status === "locked" && (
-              <button
-                disabled
-                style={{
-                  padding: "10px 20px",
-                  background: "#ccc",
-                  color: "#666",
-                  border: "none",
-                  borderRadius: "5px",
-                  cursor: "not-allowed",
-                  fontWeight: "bold",
-                }}
-              >
-                Chưa mở khóa
-              </button>
-            )}
+            <h1
+              style={{
+                color: "#333",
+                margin: 0,
+                lineHeight:
+                  "1.4" /* MỚI: Kéo dãn khoảng cách dòng để chữ không bị đè lên nhau */,
+              }}
+            >
+              Lộ trình học: {selectedLanguage.name}
+            </h1>
+            <button
+              onClick={() => setSelectedLanguage(null)}
+              style={{
+                padding: "8px 15px",
+                background: "#e2e6ea",
+                color: "#333",
+                border: "1px solid #dae0e5",
+                borderRadius: "5px",
+                cursor: "pointer",
+                fontWeight: "bold",
+                whiteSpace:
+                  "nowrap" /* MỚI: Giữ cho chữ trong nút không bị méo */,
+              }}
+            >
+              🔙 Đổi khóa học
+            </button>
           </div>
-        ))}
-      </div>
+
+          <div
+            style={{ display: "flex", flexDirection: "column", gap: "20px" }}
+          >
+            {lessons.length === 0 && (
+              <p style={{ textAlign: "center", color: "#666" }}>
+                Khóa học này chưa có bài nào.
+              </p>
+            )}
+            {lessons.map((lesson) => (
+              <div
+                key={lesson.id}
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  padding: "20px",
+                  borderRadius: "10px",
+                  border: "1px solid #ddd",
+                  background: lesson.status === "locked" ? "#f8f9fa" : "#fff",
+                  opacity: lesson.status === "locked" ? 0.6 : 1,
+                }}
+              >
+                <div>
+                  <h3 style={{ margin: 0, color: "#333" }}>
+                    Bài {lesson.orderIndex}: {lesson.title}
+                  </h3>
+                  <p
+                    style={{
+                      margin: "5px 0 0 0",
+                      color: "#666",
+                      fontSize: "14px",
+                    }}
+                  >
+                    {lesson.status === "completed" &&
+                      "✅ Bạn đã vượt qua bài này"}
+                    {lesson.status === "unlocked" && "⏳ Đang chờ bạn khám phá"}
+                    {lesson.status === "locked" &&
+                      "🔒 Hãy hoàn thành bài trước để mở khóa"}
+                  </p>
+                </div>
+                {lesson.status === "completed" && (
+                  <button
+                    onClick={() => navigate(`/lesson/${lesson.id}`)}
+                    style={{
+                      padding: "10px 20px",
+                      background: "#28a745",
+                      color: "#fff",
+                      border: "none",
+                      borderRadius: "5px",
+                      cursor: "pointer",
+                      fontWeight: "bold",
+                    }}
+                  >
+                    Đã hoàn thành
+                  </button>
+                )}
+                {lesson.status === "unlocked" && (
+                  <button
+                    onClick={() => navigate(`/lesson/${lesson.id}`)}
+                    style={{
+                      padding: "10px 20px",
+                      background: "#007bff",
+                      color: "#fff",
+                      border: "none",
+                      borderRadius: "5px",
+                      cursor: "pointer",
+                      fontWeight: "bold",
+                    }}
+                  >
+                    Vào học ngay
+                  </button>
+                )}
+                {lesson.status === "locked" && (
+                  <button
+                    disabled
+                    style={{
+                      padding: "10px 20px",
+                      background: "#ccc",
+                      color: "#666",
+                      border: "none",
+                      borderRadius: "5px",
+                      cursor: "not-allowed",
+                      fontWeight: "bold",
+                    }}
+                  >
+                    Chưa mở khóa
+                  </button>
+                )}
+              </div>
+            ))}
+          </div>
+        </>
+      )}
     </div>
   );
 }
+// ==========================================
+// TRANG 3: CHI TIẾT BÀI HỌC
+// ==========================================
 
-// ==========================================
-// TRANG 3: CHI TIẾT BÀI HỌC (CHỐNG IDM + BÔI ĐEN + CHỐNG F12)
-// ==========================================
 function LessonPage({ user }) {
   const { id } = useParams();
   const lessonId = parseInt(id);
@@ -603,9 +777,7 @@ function LessonPage({ user }) {
     setIsPassed(false);
 
     axios
-      .get(
-        `https://lms-backend-30jz.onrender.com/api/lessons/${lessonId}?userId=${user.id}`,
-      )
+      .get(`http://localhost:3000/api/lessons/${lessonId}?userId=${user.id}`)
       .then((res) => {
         setLesson(res.data.data);
         setIsLocked(false);
@@ -618,7 +790,7 @@ function LessonPage({ user }) {
       });
   }, [lessonId, user.id]);
 
-  // 🛡️ LỚP BẢO VỆ CHỐNG DOWNLOAD & SAO CHÉP
+  // 🛡️ BẢO VỆ CHỐNG DOWNLOAD BÔI ĐEN - GIỮ NGUYÊN
   useEffect(() => {
     const handleContextMenu = (e) => e.preventDefault();
     const handleCopy = (e) => e.preventDefault();
@@ -634,11 +806,9 @@ function LessonPage({ user }) {
         e.preventDefault();
       }
     };
-
     document.addEventListener("contextmenu", handleContextMenu);
     document.addEventListener("copy", handleCopy);
     document.addEventListener("keydown", handleKeyDown);
-
     return () => {
       document.removeEventListener("contextmenu", handleContextMenu);
       document.removeEventListener("copy", handleCopy);
@@ -646,12 +816,12 @@ function LessonPage({ user }) {
     };
   }, []);
 
-  // Ping tiến độ lên server bằng Video API chuẩn
+  // Ping tiến độ lên server
   useEffect(() => {
     const interval = setInterval(() => {
       if (videoRef.current && !videoRef.current.paused) {
         axios
-          .post("https://lms-backend-30jz.onrender.com/api/progress/ping", {
+          .post("http://localhost:3000/api/progress/ping", {
             userId: user.id,
             lessonId,
             currentTime: videoRef.current.currentTime,
@@ -706,7 +876,7 @@ function LessonPage({ user }) {
 
   const handleVideoEnded = () => {
     setShowQuizBtn(true);
-    axios.post("https://lms-backend-30jz.onrender.com/api/progress/ping", {
+    axios.post("http://localhost:3000/api/progress/ping", {
       userId: user.id,
       lessonId,
       currentTime: maxWatched,
@@ -739,14 +909,11 @@ function LessonPage({ user }) {
       answer: answers[qId],
     }));
     try {
-      const res = await axios.post(
-        "https://lms-backend-30jz.onrender.com/api/quiz/submit",
-        {
-          userId: user.id,
-          lessonId,
-          userAnswers: formattedAnswers,
-        },
-      );
+      const res = await axios.post("http://localhost:3000/api/quiz/submit", {
+        userId: user.id,
+        lessonId,
+        userAnswers: formattedAnswers,
+      });
       setResultMessage(res.data.message);
       setIsPassed(res.data.passed);
     } catch (error) {
@@ -779,13 +946,14 @@ function LessonPage({ user }) {
       </Link>
       <h2 style={{ textAlign: "center", marginTop: 0 }}>{lesson.title}</h2>
 
-      {/* 🛡️ Trình phát Video HLS MỚI - HOÀN TOÀN LÀM CHỦ */}
+      {/* 🛡️ Trình phát Video HLS GIỮ NGUYÊN */}
       <HlsVideoPlayer
         src={lesson.videoUrl}
         videoRef={videoRef}
         maxWatched={maxWatched}
         setMaxWatched={setMaxWatched}
         onEnded={handleVideoEnded}
+        userPhone={user.phone}
       />
 
       {showQuizBtn && !showQuizForm && (
@@ -818,7 +986,11 @@ function LessonPage({ user }) {
           }}
         >
           <h3
-            style={{ textAlign: "center", color: "#333", marginBottom: "20px" }}
+            style={{
+              textAlign: "center",
+              color: "#333",
+              marginBottom: "20px",
+            }}
           >
             📝 Bài Kiểm Tra Kiến Thức
           </h3>
@@ -938,17 +1110,19 @@ function LessonPage({ user }) {
 }
 
 // ==========================================
-// TRANG 4: ADMIN PANEL (TẠO MỚI & SỬA BÀI HỌC CŨ)
+// TRANG 4: ADMIN PANEL (CÓ THÊM CHỌN NGÔN NGỮ ĐỂ TẠO BÀI HỌC)
 // ==========================================
 function AdminPage({ user }) {
   if (user.role !== "admin") return <Navigate to="/" />;
 
   const [adminLessons, setAdminLessons] = useState([]);
+  const [languages, setLanguages] = useState([]);
   const [selectedLessonId, setSelectedLessonId] = useState("");
 
   const [title, setTitle] = useState("");
   const [videoUrl, setVideoUrl] = useState("");
   const [orderIndex, setOrderIndex] = useState("");
+  const [languageId, setLanguageId] = useState(""); // LƯU TRỮ NGÔN NGỮ ĐƯỢC CHỌN
   const [questions, setQuestions] = useState([
     {
       content: "",
@@ -962,13 +1136,25 @@ function AdminPage({ user }) {
 
   useEffect(() => {
     fetchLessons();
+    fetchLanguages();
   }, []);
 
   const fetchLessons = () => {
     axios
-      .get("https://lms-backend-30jz.onrender.com/api/admin/lessons")
+      .get("http://localhost:3000/api/admin/lessons")
       .then((res) => setAdminLessons(res.data.data))
       .catch((err) => console.error(err));
+  };
+
+  const fetchLanguages = () => {
+    axios
+      .get("http://localhost:3000/api/languages")
+      .then((res) => {
+        setLanguages(res.data.data);
+        if (res.data.data.length > 0)
+          setLanguageId(res.data.data[0].id.toString());
+      })
+      .catch(console.error);
   };
 
   const handleSelectChange = (e) => {
@@ -979,6 +1165,7 @@ function AdminPage({ user }) {
       setTitle("");
       setVideoUrl("");
       setOrderIndex("");
+      if (languages.length > 0) setLanguageId(languages[0].id.toString());
       setQuestions([
         {
           content: "",
@@ -995,6 +1182,9 @@ function AdminPage({ user }) {
         setTitle(lessonToEdit.title);
         setVideoUrl(lessonToEdit.videoUrl);
         setOrderIndex(lessonToEdit.orderIndex);
+        setLanguageId(
+          lessonToEdit.languageId ? lessonToEdit.languageId.toString() : "",
+        );
         if (lessonToEdit.questions.length > 0)
           setQuestions(lessonToEdit.questions);
         else
@@ -1039,17 +1229,18 @@ function AdminPage({ user }) {
         title,
         videoUrl,
         orderIndex: parseInt(orderIndex),
+        languageId: parseInt(languageId),
         questions,
       };
       let res;
       if (selectedLessonId === "")
         res = await axios.post(
-          "https://lms-backend-30jz.onrender.com/api/admin/lessons",
+          "http://localhost:3000/api/admin/lessons",
           payload,
         );
       else
         res = await axios.put(
-          `https://lms-backend-30jz.onrender.com/api/admin/lessons/${selectedLessonId}`,
+          `http://localhost:3000/api/admin/lessons/${selectedLessonId}`,
           payload,
         );
       alert(res.data.message);
@@ -1122,7 +1313,8 @@ function AdminPage({ user }) {
           <optgroup label="✏️ SỬA BÀI HỌC CŨ:">
             {adminLessons.map((l) => (
               <option key={l.id} value={l.id}>
-                Bài {l.orderIndex}: {l.title}
+                {l.language ? `[${l.language.name}] ` : ""}Bài {l.orderIndex}:{" "}
+                {l.title}
               </option>
             ))}
           </optgroup>
@@ -1133,6 +1325,32 @@ function AdminPage({ user }) {
         onSubmit={handleSubmit}
         style={{ display: "flex", flexDirection: "column", gap: "15px" }}
       >
+        {/* 🌟 FORM CHỌN NGÔN NGỮ DÀNH CHO ADMIN */}
+        <div>
+          <label style={{ fontWeight: "bold", color: "#d32f2f" }}>
+            Chọn Khóa Học (Ngôn ngữ):
+          </label>
+          <select
+            required
+            value={languageId}
+            onChange={(e) => setLanguageId(e.target.value)}
+            style={{
+              width: "100%",
+              padding: "10px",
+              borderRadius: "5px",
+              border: "2px solid #d32f2f",
+              fontWeight: "bold",
+              background: "#fff",
+            }}
+          >
+            {languages.map((lang) => (
+              <option key={lang.id} value={lang.id}>
+                {lang.name}
+              </option>
+            ))}
+          </select>
+        </div>
+
         <div>
           <label style={{ fontWeight: "bold" }}>Tên bài học:</label>
           <input
@@ -1190,7 +1408,6 @@ function AdminPage({ user }) {
               background: "#fff",
               borderRadius: "8px",
               border: "1px solid #ddd",
-              boxShadow: "0 2px 4px rgba(0,0,0,0.05)",
               position: "relative",
             }}
           >
@@ -1346,7 +1563,7 @@ function AdminPage({ user }) {
 }
 
 // ==========================================
-// BỘ ĐIỀU CHUYỂN TRUNG TÂM (QUẢN LÝ TRẠNG THÁI)
+// BỘ ĐIỀU CHUYỂN TRUNG TÂM
 // ==========================================
 export default function App() {
   const [user, setUser] = useState(() => {
